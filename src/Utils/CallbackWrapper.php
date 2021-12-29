@@ -47,7 +47,7 @@ class CallbackWrapper
     /**
      * @return T
      */
-    public function __invoke(object ...$parameters)
+    public function __invoke(?object ...$parameters)
     {
         return $this
             ->stage
