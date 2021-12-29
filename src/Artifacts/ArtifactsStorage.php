@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Creatortsv\Workflow\Artifacts;
+namespace Creatortsv\WorkflowProcess\Artifacts;
 
 use ArrayAccess;
 use Countable;

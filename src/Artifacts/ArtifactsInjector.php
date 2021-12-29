@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Creatortsv\Workflow\Artifacts;
+namespace Creatortsv\WorkflowProcess\Artifacts;
 
 use Closure;
-use Creatortsv\Workflow\Utils\CallbackWrapper;
+use Creatortsv\WorkflowProcess\Utils\CallbackWrapper;
 use ReflectionException;
 
 class ArtifactsInjector

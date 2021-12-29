@@ -1,16 +1,16 @@
 {
     "name": "creatortsv/workflow-process",
-    "description": "Objects workflow",
+    "description": "Objects workflow process",
     "type": "library",
     "license": "MIT",
     "autoload": {
         "psr-4": {
-            "Creatortsv\\Workflow\\": "src/"
+            "Creatortsv\\WorkflowProcess\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Creatortsv\\Workflow\\Tests\\": "tests/"
+            "Creatortsv\\WorkflowProcess\\Tests\\": "tests/"
         }
     },
     "authors": [

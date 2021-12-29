@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Creatortsv\Workflow\Processor;
+namespace Creatortsv\WorkflowProcess\Processor;
 
 use ArrayIterator;
-use Creatortsv\Workflow\Exception\StageNotFoundException;
-use Creatortsv\Workflow\Utils\CallbackWrapper;
+use Creatortsv\WorkflowProcess\Exception\StageNotFoundException;
+use Creatortsv\WorkflowProcess\Utils\CallbackWrapper;
 
 class Controller
 {

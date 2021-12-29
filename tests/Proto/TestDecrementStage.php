@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Creatortsv\Workflow\Tests\Proto;
+namespace Creatortsv\WorkflowProcess\Tests\Proto;
 
-use Creatortsv\Workflow\Stage\StageInterface;
+use Creatortsv\WorkflowProcess\Stage\StageInterface;
 
 class TestDecrementStage implements StageInterface
 {

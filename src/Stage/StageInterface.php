@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Creatortsv\Workflow\Stage;
+namespace Creatortsv\WorkflowProcess\Stage;
 
 interface StageInterface
 {

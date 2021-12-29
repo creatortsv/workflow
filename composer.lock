@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "9d6bc5b600446eb0d067a4bc868013fd",
+    "content-hash": "bc6eb4ad1eb30570441f7b7682ca5875",
     "packages": [
         {
             "name": "league/pipeline",

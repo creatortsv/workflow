@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Creatortsv\Workflow\Utils;
+namespace Creatortsv\WorkflowProcess\Utils;
 
 use Closure;
 use InvalidArgumentException;

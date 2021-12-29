@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Creatortsv\Workflow\Tests\Proto;
+namespace Creatortsv\WorkflowProcess\Tests\Proto;
 
 class TestSubject
 {

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Creatortsv\Workflow\Tests\Proto;
+namespace Creatortsv\WorkflowProcess\Tests\Proto;
 
-use Creatortsv\Workflow\Exception\StageNotFoundException;
-use Creatortsv\Workflow\Processor\Controller;
-use Creatortsv\Workflow\Stage\StageInterface;
+use Creatortsv\WorkflowProcess\Exception\StageNotFoundException;
+use Creatortsv\WorkflowProcess\Processor\Controller;
+use Creatortsv\WorkflowProcess\Stage\StageInterface;
 
 class TestIncrementStage implements StageInterface
 {

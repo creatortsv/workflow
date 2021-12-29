@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Creatortsv\Workflow\Exception;
+namespace Creatortsv\WorkflowProcess\Exception;
 
 use PHPUnit\Framework\TestCase;
 

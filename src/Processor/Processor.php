@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Creatortsv\Workflow\Processor;
+namespace Creatortsv\WorkflowProcess\Processor;
 
 use ArrayIterator;
 use Closure;
-use Creatortsv\Workflow\Artifacts\ArtifactsInjector;
-use Creatortsv\Workflow\Artifacts\ArtifactsStorage;
-use Creatortsv\Workflow\Utils\CallbackWrapper;
+use Creatortsv\WorkflowProcess\Artifacts\ArtifactsInjector;
+use Creatortsv\WorkflowProcess\Artifacts\ArtifactsStorage;
+use Creatortsv\WorkflowProcess\Utils\CallbackWrapper;
 use League\Pipeline\ProcessorInterface;
 
 /**

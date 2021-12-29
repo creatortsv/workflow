@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Creatortsv\Workflow;
+namespace Creatortsv\WorkflowProcess;
 
 use ArrayIterator;
-use Creatortsv\Workflow\Runner\WorkflowRunner;
-use Creatortsv\Workflow\Utils\CallbackWrapper;
+use Creatortsv\WorkflowProcess\Runner\WorkflowRunner;
+use Creatortsv\WorkflowProcess\Utils\CallbackWrapper;
 use ReflectionException;
 
 class Workflow implements WorkflowInterface

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Creatortsv\Workflow\Runner;
+namespace Creatortsv\WorkflowProcess\Runner;
 
 use ArrayIterator;
-use Creatortsv\Workflow\Artifacts\ArtifactsInjector;
-use Creatortsv\Workflow\Artifacts\ArtifactsStorage;
-use Creatortsv\Workflow\Processor\Processor;
-use Creatortsv\Workflow\Utils\CallbackWrapper;
+use Creatortsv\WorkflowProcess\Artifacts\ArtifactsInjector;
+use Creatortsv\WorkflowProcess\Artifacts\ArtifactsStorage;
+use Creatortsv\WorkflowProcess\Processor\Processor;
+use Creatortsv\WorkflowProcess\Utils\CallbackWrapper;
 use League\Pipeline\Pipeline;
 use ReflectionException;
 

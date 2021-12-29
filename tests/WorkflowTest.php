@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Creatortsv\Workflow\Tests;
+namespace Creatortsv\WorkflowProcess\Tests;
 
-use Creatortsv\Workflow\Runner\WorkflowRunner;
-use Creatortsv\Workflow\Tests\Proto\TestIncrementStage;
-use Creatortsv\Workflow\Workflow;
+use Creatortsv\WorkflowProcess\Runner\WorkflowRunner;
+use Creatortsv\WorkflowProcess\Tests\Proto\TestIncrementStage;
+use Creatortsv\WorkflowProcess\Workflow;
 use PHPUnit\Framework\TestCase;
 use ReflectionException;
 

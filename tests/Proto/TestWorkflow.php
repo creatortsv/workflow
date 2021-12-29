@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Creatortsv\Workflow\Tests\Proto;
+namespace Creatortsv\WorkflowProcess\Tests\Proto;
 
-use Creatortsv\Workflow\Runner\WorkflowRunner;
-use Creatortsv\Workflow\Workflow;
+use Creatortsv\WorkflowProcess\Runner\WorkflowRunner;
+use Creatortsv\WorkflowProcess\Workflow;
 
 /**
  * @method WorkflowRunner makeRunner(TestSubject $subject)
