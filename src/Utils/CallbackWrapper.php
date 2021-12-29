@@ -34,14 +34,11 @@ class CallbackWrapper
         $this->name = $name;
         $this->method = $name;
 
-        if (u($name)->containsAny('::')) {
-            $this->class = u($name)
-                ->before('::')
-                ->toString();
+        $index = strrpos($name, '::');
 
-            $this->method = u($name)
-                ->after('::')
-                ->toString();
+        if ($index !==false) {
+            $this->class = substr($name, 0, $index);
+            $this->method = substr($name, $index + 1);
         }
 
         $this->stage = new ReflectionFunction(Closure::fromCallable($stage));
