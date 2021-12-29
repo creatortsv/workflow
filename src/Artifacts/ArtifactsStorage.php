@@ -103,8 +103,9 @@ class ArtifactsStorage implements ArrayAccess, Countable
     public function offsetSet($offset, $value): void
     {
         $position = $this->count();
+        $value = clone $value;
 
-        $this->artifacts[$position] = clone $value;
+        $this->artifacts[$position] = $value;
         $this->relations[$position] = $offset;
         $this->typeLinks[$position] = is_object($value)
             ? get_class($value)
