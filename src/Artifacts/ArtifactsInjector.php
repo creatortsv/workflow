@@ -38,7 +38,7 @@ class ArtifactsInjector
                 ->getType()
                 ->getName();
 
-            if (class_exists($type)) {
+            if (class_exists($type) || interface_exists($type)) {
                 $artifacts = $this
                     ->getStorage()
                     ->useTypes()
