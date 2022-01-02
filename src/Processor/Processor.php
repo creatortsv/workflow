@@ -8,7 +8,6 @@ use ArrayIterator;
 use Closure;
 use Creatortsv\WorkflowProcess\Artifacts\ArtifactsInjector;
 use Creatortsv\WorkflowProcess\Artifacts\ArtifactsStorage;
-use Creatortsv\WorkflowProcess\Utils\CallbackWrapper;
 use League\Pipeline\ProcessorInterface;
 
 /**
@@ -66,7 +65,7 @@ final class Processor implements ProcessorInterface
                     $storage->set($data, $name);
                 }
 
-                if ((string) $stage === (string) $controller->stage()) {
+                if ($name === (string) $controller->stage()) {
                     $controller->next();
                 }
             }

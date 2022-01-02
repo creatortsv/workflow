@@ -23,4 +23,9 @@ class TestIncrementStage implements StageInterface
 
         return $subject;
     }
+
+    public function some(): bool
+    {
+        return true;
+    }
 }

@@ -8,7 +8,6 @@ use Closure;
 use InvalidArgumentException;
 use ReflectionException;
 use ReflectionFunction;
-use function Symfony\Component\String\u;
 
 /**
  * @template T
@@ -17,31 +16,31 @@ class CallbackWrapper
 {
     private ReflectionFunction $stage;
     private string $name;
-    private string $method;
-    private ?string $class;
+    private ?string $method = null;
+    private ?string $class = null;
 
     /**
      * @throws ReflectionException
      */
-    public function __construct(callable $stage)
+    public function __construct(callable $callback)
     {
-        if (!is_callable($stage, false, $name)) {
+        if (!is_callable($callback, false, $name)) {
             throw new InvalidArgumentException(
                 sprintf('Stage with the given name "%s" must be callable', $name),
             );
         }
 
-        $this->name = $name;
-        $this->method = $name;
-
         $index = strrpos($name, '::');
 
-        if ($index !==false) {
+        if ($index !== false) {
             $this->class = substr($name, 0, $index);
-            $this->method = substr($name, $index + 1);
+
+            $method = substr($name, $index + 2);
+            $method !== '__invoke' && ($this->method = $method);
         }
 
-        $this->stage = new ReflectionFunction(Closure::fromCallable($stage));
+        $this->name = $name;
+        $this->stage = new ReflectionFunction(Closure::fromCallable($callback));
     }
 
     /**
@@ -56,7 +55,14 @@ class CallbackWrapper
 
     public function __toString(): string
     {
-        return $this->class ?? $this->name;
+        return $this->method !== null
+            ? $this->name
+            : $this->class;
+    }
+
+    public function toString(): string
+    {
+        return (string) $this;
     }
 
     public function getReflection(): ReflectionFunction
@@ -77,8 +83,8 @@ class CallbackWrapper
     /**
      * @throws ReflectionException
      */
-    public static function of(callable $stage): CallbackWrapper
+    public static function of(callable $callback): CallbackWrapper
     {
-        return new CallbackWrapper($stage);
+        return new CallbackWrapper($callback);
     }
 }
