@@ -9,10 +9,10 @@ use Throwable;
 
 class StageNotFoundException extends Exception
 {
-    public function __construct(string $name, $code = 0, Throwable $previous = null)
+    public function __construct(string $name, int $number, $code = 0, Throwable $previous = null)
     {
         parent::__construct(
-            sprintf('Stage with the given name "%s" not found', $name),
+            sprintf('Stage with the given name "%s" and the number "%s" not found', $name, $number),
             $code,
             $previous,
         );

@@ -4,37 +4,40 @@ declare(strict_types=1);
 
 namespace Creatortsv\WorkflowProcess;
 
-use ArrayIterator;
 use Creatortsv\WorkflowProcess\Runner\WorkflowRunner;
-use Creatortsv\WorkflowProcess\Utils\CallbackWrapper;
 use ReflectionException;
 
 class Workflow implements WorkflowInterface
 {
     /**
-     * @var ArrayIterator<callable>
+     * @var array<callable>
      */
-    protected ArrayIterator $stages;
+    protected array $stages;
 
     public function __construct(callable ...$stages)
     {
         $this->setStages(...$stages);
     }
 
-    public function getStages(): ArrayIterator
+    /**
+     * @inheritdoc
+     */
+    public function getStages(): array
     {
         return $this->stages;
     }
 
     public function setStages(callable ...$stages): Workflow
     {
-        $this->stages = new ArrayIterator($stages);
+        $this->stages = $stages;
 
         return $this;
     }
 
     public function fresh(callable ...$stages): Workflow
     {
+        $stages = $stages ?: $this->getStages();
+
         return new static(...$stages);
     }
 
@@ -43,11 +46,8 @@ class Workflow implements WorkflowInterface
      * @param T ...$context
      * @throws ReflectionException
      */
-    public function makeRunner(...$context): WorkflowRunner
+    final public function makeRunner(...$context): WorkflowRunner
     {
-        return new WorkflowRunner($context, ...array_map(fn (callable $stage): CallbackWrapper
-            => new CallbackWrapper($stage), $this
-            ->stages
-            ->getArrayCopy()));
+        return new WorkflowRunner($context, ...$this->stages);
     }
 }

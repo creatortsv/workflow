@@ -14,15 +14,93 @@ use ReflectionFunction;
  */
 class CallbackWrapper
 {
-    private ReflectionFunction $stage;
+    /**
+     * @var callable
+     */
+    private $original;
+    private ReflectionFunction $callback;
     private string $name;
     private ?string $method = null;
     private ?string $class = null;
+    private int $count = 0;
+    private int $number;
+
+    /**
+     * @param T ...$parameters
+     * @return T
+     */
+    public function __invoke(...$parameters)
+    {
+        $this->count ++ ;
+
+        return $this
+            ->callback
+            ->invoke(...$parameters);
+    }
+
+    public function __toString(): string
+    {
+        return $this->method !== null
+            ? $this->name
+            : $this->class;
+    }
+
+    public function toString(): string
+    {
+        return (string) $this;
+    }
+
+    public function name(): string
+    {
+        return $this->toString();
+    }
+
+    public function getOriginal(): callable
+    {
+        return $this->original;
+    }
+
+    public function getReflection(): ReflectionFunction
+    {
+        return $this->callback;
+    }
+
+    public function getMethod(): string
+    {
+        return $this->method;
+    }
+
+    public function getClass(): ?string
+    {
+        return $this->class;
+    }
+
+    public function getCount(): int
+    {
+        return $this->count;
+    }
+
+    public function number(): ?int
+    {
+        return $this->number;
+    }
 
     /**
      * @throws ReflectionException
      */
-    public function __construct(callable $callback)
+    public static function of(callable $callback, ?int $number = 0): CallbackWrapper
+    {
+        if ($callback instanceof CallbackWrapper) {
+            $callback = $callback->getOriginal();
+        }
+
+        return new CallbackWrapper($callback, $number);
+    }
+
+    /**
+     * @throws ReflectionException
+     */
+    private function __construct(callable $callback, ?int $number = 0)
     {
         if (!is_callable($callback, false, $name)) {
             throw new InvalidArgumentException(
@@ -40,51 +118,8 @@ class CallbackWrapper
         }
 
         $this->name = $name;
-        $this->stage = new ReflectionFunction(Closure::fromCallable($callback));
-    }
-
-    /**
-     * @return T
-     */
-    public function __invoke(?object ...$parameters)
-    {
-        return $this
-            ->stage
-            ->invoke(...$parameters);
-    }
-
-    public function __toString(): string
-    {
-        return $this->method !== null
-            ? $this->name
-            : $this->class;
-    }
-
-    public function toString(): string
-    {
-        return (string) $this;
-    }
-
-    public function getReflection(): ReflectionFunction
-    {
-        return $this->stage;
-    }
-
-    public function getMethod(): string
-    {
-        return $this->method;
-    }
-
-    public function getClass(): ?string
-    {
-        return $this->class;
-    }
-
-    /**
-     * @throws ReflectionException
-     */
-    public static function of(callable $callback): CallbackWrapper
-    {
-        return new CallbackWrapper($callback);
+        $this->callback = new ReflectionFunction(Closure::fromCallable($callback));
+        $this->original = $callback;
+        $this->number = $number;
     }
 }

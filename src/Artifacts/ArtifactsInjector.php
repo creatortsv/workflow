@@ -51,12 +51,6 @@ class ArtifactsInjector
 
                     continue;
                 }
-
-                if ($type === ArtifactsStorage::class) {
-                    $parameters[] = $this->storage;
-
-                    continue;
-                }
             }
 
             $parameters[] = null;

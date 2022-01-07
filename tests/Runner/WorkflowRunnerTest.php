@@ -20,6 +20,7 @@ class WorkflowRunnerTest extends TestCase
     public function test__construct(): WorkflowRunner
     {
         $runner = (new Workflow(
+            new TestIncrementStage(),
             fn (TestSubject $context): TestSubject => $context->setNum($context->getNum() + 2),
             fn (TestSubject $context): TestSubject => $context->setNum($context->getNum() * 2),
             new TestDecrementStage(),
@@ -33,6 +34,7 @@ class WorkflowRunnerTest extends TestCase
 
     /**
      * @depends test__construct
+     * @throws ReflectionException
      */
     public function testRun(WorkflowRunner $runner): WorkflowRunner
     {
