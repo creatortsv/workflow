@@ -1,5 +1,6 @@
 # Workflow Process
 [![PHP Composer](https://github.com/creatortsv/workflow/actions/workflows/php.yml/badge.svg)](https://github.com/creatortsv/workflow/actions/workflows/php.yml)
+![GitHub release (release name instead of tag name)](https://img.shields.io/github/v/release/creatortsv/workflow-process?include_prereleases)
 
 This stand-alone PHP package helps you create and organize processes using stages, which you can easily configure to build different workflows
 ***
