@@ -43,9 +43,7 @@ class WorkflowTest extends TestCase
      */
     public function testFresh(Workflow $workflow): Workflow
     {
-        $workflow = $workflow->fresh(...array_slice($workflow
-            ->getStages()
-            ->getArrayCopy(), 1));
+        $workflow = $workflow->fresh(...array_slice($workflow->getStages(), 1));
 
         $this->assertCount(2, $workflow->getStages());
 

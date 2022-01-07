@@ -139,12 +139,14 @@ class ArtifactsStorage implements ArrayAccess, Countable
      */
     protected function positions(string $name): array
     {
-        if ($this->property() === 'relations') {
-            return array_keys($this->property(), $name, true);
-        } else {
-            return array_keys(array_filter($this->typeLinks, fn (string $type): bool => $name === $type
-                || is_subclass_of($type, $name)));
-        }
+        $filter = fn (string $type): bool => $name === $type || is_subclass_of($type, $name);
+        $result = $this->useTypes !== true
+            ? array_keys($this->relations, $name, true)
+            : array_keys(array_filter($this->typeLinks, $filter));
+
+        $this->useTypes = false;
+
+        return $result;
     }
 
     /**

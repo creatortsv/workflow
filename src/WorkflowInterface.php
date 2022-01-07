@@ -9,7 +9,10 @@ use Creatortsv\WorkflowProcess\Runner\WorkflowRunner;
 
 interface WorkflowInterface
 {
+    /**
+     * @return array<callable>
+     */
+    public function getStages(): array;
     public function setStages(callable ...$stages): WorkflowInterface;
-    public function getStages(): ArrayIterator;
     public function makeRunner(): WorkflowRunner;
 }
