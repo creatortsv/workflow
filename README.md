@@ -59,7 +59,7 @@ $workflow = new Workflow(
 );
 
 $amount = new Amount(amount: 0);
-$runner = $workflow->makeRunner($amount);
+$runner = $workflow->makeRunner(context: $amount);
 $runner->run();
 
 echo $amount->getAmount(); // Prints 10
@@ -82,7 +82,7 @@ class IncrementStage
     ): Amount {
         // Switch to specific stage
         // The same behaviour as switchTo method
-        $switcher(MakeMessageStage::class);
+        $switcher(name: MakeMessageStage::class);
     
         return $amount->increment(plus: $this->plus);
     }
@@ -146,7 +146,7 @@ $workflow = new Workflow(
 );
 
 $amount = new Amount(amount: 0);
-$runner = $workflow->makeRunner($amount);
+$runner = $workflow->makeRunner(context: $amount);
 $runner->run();
 
 // It prints
@@ -169,7 +169,7 @@ class MyWorkflow extends Workflow
 {
     public function __invoke(Amount $amount): Amount
     {
-        $this->makeRunner($amount)->run();   
+        $this->makeRunner(context: $amount)->run();   
     
         return $amount;
     }
@@ -179,8 +179,6 @@ $stages = array_fill(0, 3, new MyWorkflow(
     new IncrementStage(plus: 3),
     new IncrementStage(plus: 7),
     new MakeMessageStage(),
-    // Add the anonymous stage for example
-    // That takes all the messages and prints each of them
     function (Message ...$messages): void {
         array_walk($messages, fn (Message $m) => echo (string) $m)
     },
@@ -189,7 +187,7 @@ $stages = array_fill(0, 3, new MyWorkflow(
 $workflow = new Workflow(...$stages);
 
 $amount = new Amount(amount: 0);
-$runner = $workflow->makeRunner($amount);
+$runner = $workflow->makeRunner(context: $amount);
 $runner->run();
 
 // It prints
@@ -208,18 +206,19 @@ $workflow = new Workflow(
     new IncrementStage(plus: 3),
     new IncrementStage(plus: 7),
     new MakeMessageStage(),
-    // Add the anonymous stage for example
-    // That takes all the messages and prints each of them
     function (Message ...$messages): void {
         array_walk($messages, fn (Message $m) => echo (string) $m)
     },
 );
 
 $amount = new Amount(amount: 0);
-$runner = $workflow->makeRunner($amount);
+$runner = $workflow->makeRunner(context: $amount);
 $runner->run();
 
 [$amount, $messageOne, $messageTwo] = $runner->then(
-    fn (Amount $amount, Message ...$messages): array => [$amount, ...$messages],
+    callback: fn (
+        Amount $amount,
+        Message ...$messages
+    ): array => [$amount, ...$messages],
 );
 ```
