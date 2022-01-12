@@ -20,6 +20,16 @@ class Workflow implements WorkflowInterface
     }
 
     /**
+     * @throws ReflectionException
+     */
+    public function __invoke(...$context): array
+    {
+        $this->makeRunner(...$context)->run();
+
+        return $context;
+    }
+
+    /**
      * @inheritdoc
      */
     public function getStages(): array

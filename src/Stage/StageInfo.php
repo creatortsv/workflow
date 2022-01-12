@@ -29,8 +29,13 @@ class StageInfo
         return $this->count;
     }
 
-    public function number(): ?int
+    public function number(): int
     {
         return $this->number;
+    }
+
+    public function is(string $name): bool
+    {
+        return $this->name() === $name;
     }
 }

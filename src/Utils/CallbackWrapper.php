@@ -23,7 +23,7 @@ class CallbackWrapper
     private ?string $method = null;
     private ?string $class = null;
     private int $count = 0;
-    private int $number;
+    private int $number = 1;
 
     /**
      * @param T ...$parameters
@@ -65,7 +65,7 @@ class CallbackWrapper
         return $this->callback;
     }
 
-    public function getMethod(): string
+    public function getMethod(): ?string
     {
         return $this->method;
     }
@@ -80,7 +80,7 @@ class CallbackWrapper
         return $this->count;
     }
 
-    public function number(): ?int
+    public function number(): int
     {
         return $this->number;
     }
@@ -88,7 +88,7 @@ class CallbackWrapper
     /**
      * @throws ReflectionException
      */
-    public static function of(callable $callback, ?int $number = 0): CallbackWrapper
+    public static function of(callable $callback, int $number = 1): CallbackWrapper
     {
         if ($callback instanceof CallbackWrapper) {
             $callback = $callback->getOriginal();
@@ -100,7 +100,7 @@ class CallbackWrapper
     /**
      * @throws ReflectionException
      */
-    private function __construct(callable $callback, ?int $number = 0)
+    private function __construct(callable $callback, int $number = 1)
     {
         if (!is_callable($callback, false, $name)) {
             throw new InvalidArgumentException(

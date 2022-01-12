@@ -60,18 +60,12 @@ class StageSwitcher
 
     public function prev(): ?StageInfo
     {
-        ($this->prev)($stages = $this->getClonedStages());
-        $stage = $stages->current();
-
-        return !$stage ? $stage : new StageInfo($stage);
+        return $this->getPredictedStage($this->prev);
     }
 
     public function next(): ?StageInfo
     {
-        ($this->next)($stages = $this->getClonedStages());
-        $stage = $stages->current();
-
-        return !$stage ? $stage : new StageInfo($stage);
+        return $this->getPredictedStage($this->next);
     }
 
     private function nextCallback(): Closure
@@ -113,5 +107,16 @@ class StageSwitcher
         $stages->seek($this->stages->key());
 
         return $stages;
+    }
+
+    private function getPredictedStage(Closure $fn): ?StageInfo
+    {
+        $fn($stages = $this->getClonedStages());
+
+        if ($stage = $stages->current()) {
+            return new StageInfo($stage);
+        }
+
+        return null;
     }
 }
