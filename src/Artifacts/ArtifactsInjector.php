@@ -43,17 +43,15 @@ class ArtifactsInjector
                     ->getStorage()
                     ->useTypes()
                     ->get($type);
-
-                if ($artifacts) {
-                    $parameter->isVariadic()
-                        ? array_push($parameters, ...$artifacts)
-                        : array_push($parameters, $artifacts[max(array_keys($artifacts))]);
-
-                    continue;
-                }
             }
 
-            $parameters[] = null;
+            if (isset($artifacts) && $artifacts) {
+                $parameter->isVariadic()
+                    ? array_push($parameters, ...$artifacts)
+                    : array_push($parameters, $artifacts[max(array_keys($artifacts))]);
+            } else {
+                $parameters[] = null;
+            }
         }
 
         return fn () => $callback(...$parameters);

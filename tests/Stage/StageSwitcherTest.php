@@ -7,28 +7,28 @@ namespace Creatortsv\WorkflowProcess\Tests\Stage;
 use ArrayIterator;
 use Closure;
 use Creatortsv\WorkflowProcess\Stage\StageInfo;
+use Creatortsv\WorkflowProcess\Stage\StageManager;
 use Creatortsv\WorkflowProcess\Stage\StageSwitcher;
 use Creatortsv\WorkflowProcess\Tests\Proto\TestDecrementStage;
 use Creatortsv\WorkflowProcess\Tests\Proto\TestSubject;
 use Creatortsv\WorkflowProcess\Utils\CallbackWrapper;
 use PHPUnit\Framework\TestCase;
 use ReflectionException;
+use ReflectionProperty;
 
 class StageSwitcherTest extends TestCase
 {
-    private static ?ArrayIterator $stages = null;
-
     /**
      * @throws ReflectionException
      */
     public function test__construct(): StageSwitcher
     {
-        $closures = $this::makeStages(true);
-        $switcher = new StageSwitcher($closures);
+        $manager = new StageManager(... (array) $this::makeStages());
+        $switcher = new StageSwitcher($manager);
 
-        $current = $this->getExecutedStageInfo($closures->current());
+        $current = $this->getExecutedStageInfo($manager->getStages()->current());
 
-        $this->assertNull($switcher->prev());
+        $this->assertNull($switcher->previous());
         $this->assertStageInfo($current, Closure::class, 1, 1);
         $this->assertStageInfo($switcher->next(), TestDecrementStage::class, 0, 1);
 
@@ -41,18 +41,19 @@ class StageSwitcherTest extends TestCase
      */
     public function testSwitch(StageSwitcher $switcher): StageSwitcher
     {
-        $switcher->switch();
-        $closures = $this::makeStages();
-        $current = $this->getExecutedStageInfo($closures->current(), new TestSubject());
+        $manager = $this->getManager($switcher);
+        $manager->switch();
 
-        $this->assertStageInfo($switcher->prev(), Closure::class, 1, 1);
+        $current = $this->getExecutedStageInfo($manager->getStages()->current(), new TestSubject());
+
+        $this->assertStageInfo($switcher->previous(), Closure::class, 1, 1);
         $this->assertStageInfo($current, TestDecrementStage::class, 1, 1);
         $this->assertStageInfo($switcher->next(), TestDecrementStage::class, 0, 2);
 
-        $switcher->switch();
-        $current = $this->getExecutedStageInfo($closures->current(), new TestSubject());
+        $manager->switch();
+        $current = $this->getExecutedStageInfo($manager->getStages()->current(), new TestSubject());
 
-        $this->assertStageInfo($switcher->prev(), TestDecrementStage::class, 1, 1);
+        $this->assertStageInfo($switcher->previous(), TestDecrementStage::class, 1, 1);
         $this->assertStageInfo($current, TestDecrementStage::class, 1, 2);
         $this->assertNull($switcher->next());
 
@@ -65,18 +66,18 @@ class StageSwitcherTest extends TestCase
      */
     public function testSwitchTo(StageSwitcher $switcher): void
     {
-        $switcher(TestDecrementStage::class, 1);
-        $closures = $this::makeStages();
-        $current = $this->getExecutedStageInfo($closures->current(), new TestSubject());
+        $switcher(TestDecrementStage::class);
+        $manager = $this->getManager($switcher);
+        $current = $this->getExecutedStageInfo($manager->getStages()->current(), new TestSubject());
 
-        $this->assertStageInfo($switcher->prev(), TestDecrementStage::class, 1, 1);
+        $this->assertStageInfo($switcher->previous(), TestDecrementStage::class, 1, 1);
         $this->assertStageInfo($current, TestDecrementStage::class, 2, 2);
         $this->assertStageInfo($switcher->next(), TestDecrementStage::class, 1, 1);
 
-        $switcher->switch();
-        $current = $this->getExecutedStageInfo($closures->current(), new TestSubject());
+        $manager->switch();
+        $current = $this->getExecutedStageInfo($manager->getStages()->current(), new TestSubject());
 
-        $this->assertStageInfo($switcher->prev(), TestDecrementStage::class, 2, 2);
+        $this->assertStageInfo($switcher->previous(), TestDecrementStage::class, 2, 2);
         $this->assertStageInfo($current, TestDecrementStage::class, 2, 1);
         $this->assertStageInfo($switcher->next(), TestDecrementStage::class, 2, 2);
     }
@@ -96,36 +97,41 @@ class StageSwitcherTest extends TestCase
     /**
      * @throws ReflectionException
      */
-    private static function makeStages(bool $fresh = false): ArrayIterator
+    private static function makeStages(): ArrayIterator
     {
-        if (static::$stages !== null) {
-            $fresh && static::$stages->rewind();
-        } else {
-            $number = [];
-            $stages = new ArrayIterator();
-            $inputs = [
-                fn () => true,
-                new TestDecrementStage(),
-                new TestDecrementStage(),
-            ];
+        $number = [];
+        $stages = new ArrayIterator();
+        $inputs = [
+            fn () => true,
+            new TestDecrementStage(),
+            new TestDecrementStage(),
+        ];
 
-            foreach ($inputs as $stage) {
-                $name = CallbackWrapper::of($stage)->name();
-                $number[$name] ??= 0;
-                $number[$name] ++ ;
-                $stages->append(CallbackWrapper::of($stage, $number[$name]));
-            }
-
-            static::$stages = $stages;
+        foreach ($inputs as $stage) {
+            $name = CallbackWrapper::of($stage)->name();
+            $number[$name] ??= 0;
+            $number[$name] ++ ;
+            $stages->append(CallbackWrapper::of($stage, $number[$name]));
         }
 
-        return static::$stages;
+        return $stages;
     }
 
     private function getExecutedStageInfo(CallbackWrapper $stage, object ...$arguments): StageInfo
     {
         $stage(...$arguments);
 
-        return new StageInfo($stage);
+        return StageInfo::of($stage);
+    }
+
+    /**
+     * @throws ReflectionException
+     */
+    private function getManager(StageSwitcher $switcher): StageManager
+    {
+        $property = new ReflectionProperty($switcher, 'manager');
+        $property->setAccessible(true);
+
+        return $property->getValue($switcher);
     }
 }

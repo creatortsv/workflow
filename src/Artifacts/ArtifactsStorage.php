@@ -150,7 +150,7 @@ class ArtifactsStorage implements ArrayAccess, Countable
     }
 
     /**
-     * @return array<int, T|string>
+     * @return array<int, (T|string)>
      */
     protected function property(): array
     {

@@ -105,7 +105,7 @@ class MakeMessageStage
         StageSwitcher $switcher,
     ): Message {
         // Get info about the previous stage
-        $previous = $switcher->prev();
+        $previous = $switcher->previous();
     
         try {
             // Get the previous stage position number
@@ -118,8 +118,10 @@ class MakeMessageStage
                 number: $position ++
             );
             
-            // Checking if the next stage exists
-            $switcher->next();
+            // Or if the stage which should be next is unknown
+            // it needs to return to back and continue
+            // with the previous order of stages
+            $switcher->back()->skip(1);
         } catch (StageNotFoundException $e) {
         }
         
@@ -222,3 +224,156 @@ $runner->run();
     ): array => [$amount, ...$messages],
 );
 ```
+
+### Switching between stages
+As it is described above stages will be executed in the order in which they were passed to the constructor of the ```Workflow``` class.
+
+#### Switch by the name of the stage
+```php
+// ...
+
+$workflow = new Workflow(
+    new MyStage(),
+    new MyStage(),
+    
+    // Switched to the first stage
+    fn (StageSwitcher $switch) => $switch(
+        name: MyStage::class,
+    ),
+);
+
+// ...
+```
+#### Switch by the name and specific number
+In this case will be used both the name of the specific stage and the number, which is assigned automatically and depends on how many stages with the same name were passed in the ```Workflow``` class object.
+```php
+// ...
+
+$workflow = new Workflow(
+    new MyStage(), // number 1
+    new MyStage(), // number 2
+    
+    // Switched to the previous stage
+    fn (StageSwitcher $switch) => $switch(
+        name: MyStage::class,
+        number: 2,
+    ),
+);
+
+// ...
+```
+#### Switch to the previous stage
+In this case the previous stage can be anything.
+
+For example, if the stage sends some message to a message broker and for some reason it was failed, before continue the next stage should switch it to back and try again.
+```php
+// ...
+
+$workflow = new Workflow(
+    new MyStage(),
+    new MyStage(),
+    
+    // Switched to the previous stage
+    fn (StageSwitcher $switch, ?Failed $failed = null)
+        => $failed && $switch->back(),
+);
+
+// ...
+```
+#### Skip stages
+Sometimes needed to log some result of each stage and doing this by the stage itself is not a good idea.
+
+How it can be done ?
+```php
+// ...
+
+// This example uses a Closure function as logger stage
+$after = fn (StageSwitcher $switch) => $switch(
+    name: Closure::class,
+)
+
+// Should be done for each of the stages
+// that needed to be logged
+$stageOne = CallbackWrapper::of(new MyStage());
+$stageOne->after(callback: $after);
+
+$stageTwo = new MyStage();
+$workflow = new Workflow(
+    $stageOne, // This stage will be logged
+    $stageTwo, // And this one is not
+    
+    // Just skip the logger stage
+    // Because it could be endless
+    fn (StageSwitcher $switch) => $switch->skip(1),
+    
+    function (StageSwitcher $switch): void {
+        $previous = $switch
+            ->previos()
+            ->name();
+            
+        // ... log message
+        
+        // Switched to the $stageOne and skip it.
+        // It moves to the $stageTwo class
+        $switch->back()->skip(1);
+        
+        // Or with the name of the stage
+        $switch(name: $previous)->skip(1);
+    },
+);
+
+// ...
+```
+### Artifacts injection
+Artifacts can be injected in any order that needed.
+
+The object of the ```Workflow``` class with 3 stages is given
+- The first one returns ```MyObject``` with the value equals to 10
+- The second one returns ```MyObject``` with the value equals to 20
+- The third one returns ```MyMessage``` with the value "message"
+```php
+// ...
+
+$workflow = new Workflow(
+    fn (): MyObject => new MyObject(value: 10),
+    fn (): MyObject => new MyObject(value: 20),
+    fn (): MyMessage => new MyMessage(string: 'message'),
+);
+
+// ...
+```
+
+Let's create the stage which takes 2 objects each of types
+```php
+// ...
+
+$stages = $workflow->getStages();
+$stages[] = function (
+    MyMessage $m,
+    MyObject $obj,
+): void {
+    echo $m->message(); // Prints "message"
+    echo $obj->value(); // Prints 20
+};
+
+$stages[] = function (
+    MyMessage $m = null, // Exception won't be thrown if MyMessage is not ready
+    MyObject ...$objects, // Exception won't be thrown if MyObject is not ready
+    StageSwitcher $switcher // Predefined artifact that is always ready 
+): void {
+    // Prints 10 and 20
+    aray_walk($objects, fn (MyObject $obj) => echo $obj->value())
+}
+
+$workflow->setStages(...$stages);
+
+// ...
+```
+If the stage is trying to get some objects which:
+- Is not nullable
+- Is not variadic
+- have not been passed as an argument into ```Workflow::makeRunner``` method
+- Have not been returned by the stages before
+- Will be returned by the stages after
+
+**Exception will be thrown by these cases.** Except the ```StageSwitcher``` class object
