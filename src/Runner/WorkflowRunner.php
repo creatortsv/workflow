@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Creatortsv\WorkflowProcess\Runner;
 
-use ArrayIterator;
 use Creatortsv\WorkflowProcess\Artifacts\ArtifactsInjector;
 use Creatortsv\WorkflowProcess\Artifacts\ArtifactsStorage;
+use Creatortsv\WorkflowProcess\Stage\Skip;
+use Creatortsv\WorkflowProcess\Stage\StageManager;
 use Creatortsv\WorkflowProcess\Stage\StageSwitcher;
-use Creatortsv\WorkflowProcess\Utils\CallbackWrapper;
 use ReflectionException;
 
 /**
@@ -16,8 +16,7 @@ use ReflectionException;
  */
 final class WorkflowRunner
 {
-    private ArrayIterator $stages;
-    private StageSwitcher $switcher;
+    private StageManager $manager;
     private ArtifactsInjector $injector;
 
     /**
@@ -26,26 +25,14 @@ final class WorkflowRunner
      */
     public function __construct(array $context, callable ...$stages)
     {
-        $this->stages = new ArrayIterator();
-
-        $numbers = [];
-
-        foreach ($stages as $stage) {
-            $name = CallbackWrapper::of($stage)->name();
-            $numbers[$name] ??= 0;
-            $numbers[$name] ++ ;
-
-            $this->stages->append(CallbackWrapper::of($stage, $numbers[$name]));
-        }
-
-        $this->switcher = new StageSwitcher($this->stages);
-
         $storage = new ArtifactsStorage();
-        $context = [$this->switcher, $storage, ...$context];
 
-        array_walk($context, fn ($payload) => $storage->set($payload));
-
+        $this->manager = new StageManager(...$stages);
         $this->injector = new ArtifactsInjector($storage);
+
+        $context = [new StageSwitcher($this->manager), $storage, ...array_values($context)];
+
+        array_walk($context, fn ($artifact) => $storage->set($artifact));
     }
 
     /**
@@ -54,24 +41,26 @@ final class WorkflowRunner
     public function run(): WorkflowRunner
     {
         $stage = $this
-            ->stages
+            ->manager
+            ->getStages()
             ->current();
 
         if ($stage !== null) {
             $name = $stage->name();
             $data = $this->injector->injectInto($stage)();
-            $this->switcher->switch();
 
-            if ($data !== null
-                && !$data instanceof ArtifactsStorage
-                && !$data instanceof StageSwitcher) {
-                $this->injector->getStorage()->set($data, $name);
+            $this->validateData($data) && $this->injector
+                ->getStorage()
+                ->set($data, $name);
+
+            if ($stage->getAfterCallback() !== null) {
+                $this->injector->injectInto($stage->getAfterCallback())();
             }
+
+            $this->manager->switch();
 
             return $this->run();
         }
-
-        $this->switcher->switch();
 
         return $this;
     }
@@ -86,5 +75,15 @@ final class WorkflowRunner
         return $this
             ->injector
             ->injectInto($callback)();
+    }
+
+    /**
+     * @param T $data
+     */
+    private function validateData($data): bool
+    {
+        return ($data !== null
+            && !$data instanceof ArtifactsStorage
+            && !$data instanceof StageSwitcher);
     }
 }

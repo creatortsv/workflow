@@ -8,34 +8,45 @@ use Creatortsv\WorkflowProcess\Utils\CallbackWrapper;
 
 class StageInfo
 {
-    private string $name;
-    private int $count;
-    private int $number;
-
-    public function __construct(CallbackWrapper $wrapper)
-    {
-        $this->name = $wrapper->name();
-        $this->count = $wrapper->getCount();
-        $this->number = $wrapper->number();
-    }
+    private CallbackWrapper $wrapper;
 
     public function name(): string
     {
-        return $this->name;
+        return $this
+            ->wrapper
+            ->name();
     }
 
     public function getExecutedTimes(): int
     {
-        return $this->count;
+        return $this
+            ->wrapper
+            ->getCount();
     }
 
     public function number(): int
     {
-        return $this->number;
+        return $this
+            ->wrapper
+            ->number();
     }
 
     public function is(string $name): bool
     {
         return $this->name() === $name;
+    }
+
+    public static function of(?CallbackWrapper $wrapper = null): ?StageInfo
+    {
+        if ($wrapper !== null) {
+            return new self($wrapper);
+        }
+
+        return null;
+    }
+
+    private function __construct(CallbackWrapper $wrapper)
+    {
+        $this->wrapper = $wrapper;
     }
 }

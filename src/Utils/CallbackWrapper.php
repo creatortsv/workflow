@@ -19,6 +19,7 @@ class CallbackWrapper
      */
     private $original;
     private ReflectionFunction $callback;
+    private ?Closure $afterCallback = null;
     private string $name;
     private ?string $method = null;
     private ?string $class = null;
@@ -31,11 +32,13 @@ class CallbackWrapper
      */
     public function __invoke(...$parameters)
     {
-        $this->count ++ ;
-
-        return $this
+        $result = $this
             ->callback
             ->invoke(...$parameters);
+
+        $this->count ++ ;
+
+        return $result;
     }
 
     public function __toString(): string
@@ -53,6 +56,21 @@ class CallbackWrapper
     public function name(): string
     {
         return $this->toString();
+    }
+
+    public function after(Closure $callback): CallbackWrapper
+    {
+        $this->afterCallback = $callback;
+
+        return $this;
+    }
+
+    /**
+     * @return Closure|null
+     */
+    public function getAfterCallback(): ?Closure
+    {
+        return $this->afterCallback;
     }
 
     public function getOriginal(): callable
