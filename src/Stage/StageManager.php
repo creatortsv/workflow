@@ -27,21 +27,15 @@ class StageManager
         $numbers = [];
 
         foreach ($stages as $stage) {
-            $name = CallbackWrapper::of($stage)->name();
+            $stage = CallbackWrapper::of($stage);
+            $name = (string) $stage;
             $numbers[$name] ??= 0;
             $numbers[$name] ++ ;
 
             $this->stages->append(CallbackWrapper::of($stage, $numbers[$name]));
         }
 
-        $this->stages->rewind();
-
-        $current = $this
-            ->stages
-            ->key();
-
-        $this->prev = $this::switcher($this::position($current, - 1));
-        $this->next = $this::switcher($this::position($current, + 1));
+        $this->restart();
     }
 
     public function getStages(): ArrayIterator
@@ -67,9 +61,37 @@ class StageManager
         return $this;
     }
 
-    public function back(): StageManager
+    public function restart(): StageManager
     {
-        $this->next = $this->prev;
+        $this->stages->rewind();
+
+        $current = $this
+            ->stages
+            ->key();
+
+        $this->prev = $this::switcher($this::position($current, - 1));
+        $this->next = $this::switcher($this::position($current, + 1));
+
+        return $this;
+    }
+
+    public function back(int $length = 1): StageManager
+    {
+        if ($length === 0) {
+            return $this;
+        }
+
+        $length = abs($length);
+        $length -- ;
+        $number = (int) $this
+            ->predict($this->prev)
+            ->key() - $length;
+
+        if ($number < 0) {
+            $number = 0;
+        }
+
+        $this->next = $this::switcher($number);
 
         return $this;
     }
@@ -78,6 +100,10 @@ class StageManager
     {
         if ($length < 0) {
             throw new OutOfBoundsException();
+        }
+
+        if ($length === 0) {
+            return $this;
         }
 
         $predicted = $this

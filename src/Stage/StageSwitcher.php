@@ -15,6 +15,7 @@ use ReflectionMethod;
  * @method StageSwitcher skip(int $length = 0)
  * @method StageSwitcher stop()
  * @method StageSwitcher back()
+ * @method StageSwitcher restart()
  * @method StageInfo|null next()
  * @method StageInfo|null previous()
  */

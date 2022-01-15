@@ -276,6 +276,52 @@ $workflow = new Workflow(
     // Switched to the previous stage
     fn (StageSwitcher $switch, ?Failed $failed = null)
         => $failed && $switch->back(),
+        
+    // Switch to the first stage by this
+    fn (StageSwitcher $switch, ?Failed $failed = null)
+        => $failed && $switch->back(length: 2),
+);
+
+// ...
+```
+The ```StageSwitcher::back``` method with ```length``` argument more than ```1``` switches to the previous stage and then decrements the position of the stack from the previous stage by ```length - 1```. If the ```length``` argument too big, it switches to the beginning.
+```php
+// ...
+
+$workflow = new Workflow(
+    new MyStage(),
+    new MyStage(),
+    new SwitchToTheEndStage(),
+    new MyStage(), // Stage won't be executed
+    
+    //  Switched to the second stage
+    fn (StageSwitcher $switch, ?Failed $failed = null)
+        => $failed && $switch->back(length: 2),
+    //  All the lines below switch to the first stage
+    //  => $failed && $switch->back(length: 3),
+    //  => $failed && $switch->back(length: 5),
+);
+
+// ...
+```
+The ```StageSwitcher::restart``` method also switches to the beginning, the difference between them is that the last one reset all the process, but with persisted artifacts.
+```php
+// ...
+
+$workflow = new Workflow(
+    function (
+        StageSwitcher $switcher,
+        MyObject ...$objects,
+    ): void {
+        print_r(count($objects)); // Is 0 for the first time
+        print_r($switcher->previous()) // Always be null
+    }
+    
+    fn (): MyObject => new MyObject(),
+    
+    // After this stage the first one
+    // will print 1 instead of 0 and
+    fn (StageSwitcher $switch) => $switch->restart();
 );
 
 // ...
