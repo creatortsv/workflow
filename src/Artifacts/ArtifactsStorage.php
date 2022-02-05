@@ -4,91 +4,35 @@ declare(strict_types=1);
 
 namespace Creatortsv\WorkflowProcess\Artifacts;
 
-use ArrayAccess;
 use Countable;
 
-/**
- * @template T
- */
-class ArtifactsStorage implements ArrayAccess, Countable
+class ArtifactsStorage implements Countable
 {
     /**
-     * [Value]: the original artifact value (cloned)
+     * [Value]: the original artifact value
      * [Key  ]: the artifact's position
-     * @var array<int, T>
+     * @var array<int, mixed>
      */
     private array $artifacts = [];
 
     /**
-     * [Value]: the artifact's name (class name or function name or callable object name)
+     * [Value]: the artifact's type or name
      * [Key  ]: the artifact's position in this storage
      * @var array<int, string>
      */
     private array $relations = [];
 
-    /**
-     * [Value]: the artifact's type
-     * [Key  ]: the artifact's position in this storage
-     * @var array<int, string>
-     */
-    private array $typeLinks = [];
-
-    /**
-     * Switches from the relations property to the typeLinks
-     */
-    private bool $useTypes = false;
-
-    public function has(string $name): bool
+    public function has(string $nameOrType): bool
     {
-        return $this->offsetExists($name);
+        return $this->count($nameOrType) > 0;
     }
 
     /**
-     * @return array<T>
+     * @return array<int, mixed>
      */
-    public function get(string $name): array
+    public function get(string $nameOrType): array
     {
-        return $this->offsetGet($name);
-    }
-
-    /**
-     * @param T $artifact
-     */
-    public function set($artifact, ?string $name = null): ArtifactsStorage
-    {
-        $this->offsetSet($name, $artifact);
-
-        return $this;
-    }
-
-    public function remove(string $name): ArtifactsStorage
-    {
-        $this->offsetUnset($name);
-
-        return $this;
-    }
-
-    public function useTypes(bool $switch = true): ArtifactsStorage
-    {
-        $this->useTypes = $switch;
-
-        return $this;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function offsetExists($offset): bool
-    {
-        return in_array($offset, $this->property(), true);
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function offsetGet($offset): array
-    {
-        $positions = $this->positions($offset);
+        $positions = $this->positions($nameOrType);
 
         return array_filter($this->artifacts, fn (int $position): bool => in_array(
             $position,
@@ -97,32 +41,24 @@ class ArtifactsStorage implements ArrayAccess, Countable
         ), ARRAY_FILTER_USE_KEY);
     }
 
-    /**
-     * @inheritdoc
-     */
-    public function offsetSet($offset, $value): void
+    public function set(mixed $artifact, ?string $name = null): ArtifactsStorage
     {
         $position = $this->count();
 
-        $this->artifacts[$position] = $value;
-        $this->relations[$position] = $offset;
-        $this->typeLinks[$position] = is_object($value)
-            ? get_class($value)
-            : gettype($value);
+        $this->artifacts[$position] = $artifact;
+        $this->relations[$position] = $name ?? get_debug_type($artifact);
+
+        return $this;
     }
 
-    /**
-     * @inheritdoc
-     */
-    public function offsetUnset($offset): void
+    public function remove(string $nameOrType): ArtifactsStorage
     {
-        $positions = $this->positions($offset);
-
-        foreach ($positions as $position) {
-            unset($this->artifacts[$position]);
-            unset($this->relations[$position]);
-            unset($this->typeLinks[$position]);
+        foreach (array_reverse($this->positions($nameOrType)) as $position) {
+            array_splice($this->artifacts, $position, 1);
+            array_splice($this->relations, $position, 1);
         }
+
+        return $this;
     }
 
     public function count(?string $name = null): int
@@ -139,23 +75,21 @@ class ArtifactsStorage implements ArrayAccess, Countable
      */
     protected function positions(string $name): array
     {
-        $filter = fn (string $type): bool => $name === $type || is_subclass_of($type, $name);
-        $result = $this->useTypes !== true
-            ? array_keys($this->relations, $name, true)
-            : array_keys(array_filter($this->typeLinks, $filter));
+        $filter = function (string $nameOrType) use ($name): bool {
+            $isMatched = $name === $nameOrType;
 
-        $this->useTypes = false;
+            if ($isMatched !== true) {
+                $isMatched = class_exists($nameOrType) && is_subclass_of($nameOrType, $name);
+            }
 
-        return $result;
-    }
+            if ($isMatched !== true) {
+                $isMatched = interface_exists($nameOrType)
+                    && in_array($name, class_implements($nameOrType), true);
+            }
 
-    /**
-     * @return array<int, (T|string)>
-     */
-    protected function property(): array
-    {
-        return $this->useTypes
-            ? $this->typeLinks
-            : $this->relations;
+            return $isMatched;
+        };
+
+        return array_keys(array_filter($this->relations, $filter));
     }
 }

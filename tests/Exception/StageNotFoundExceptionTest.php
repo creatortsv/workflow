@@ -2,17 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Creatortsv\WorkflowProcess\Exception;
+namespace Creatortsv\WorkflowProcess\Tests\Exception;
 
+use Creatortsv\WorkflowProcess\Exception\StagesNotFoundException;
 use PHPUnit\Framework\TestCase;
 
 class StageNotFoundExceptionTest extends TestCase
 {
     public function test__construct(): void
     {
-        $this->expectException(StageNotFoundException::class);
-        $this->expectErrorMessage('Stage with the given name "some" and the number "1" not found');
+        $this->expectException(StagesNotFoundException::class);
+        $this->expectErrorMessage('Stages "some" not found');
 
-        throw new StageNotFoundException('some', 1);
+        throw new StagesNotFoundException('some');
     }
 }

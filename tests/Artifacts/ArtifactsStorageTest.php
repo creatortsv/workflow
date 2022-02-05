@@ -1,67 +1,32 @@
 <?php
 
-declare(strict_types=1);
-
 namespace Creatortsv\WorkflowProcess\Tests\Artifacts;
 
 use Creatortsv\WorkflowProcess\Artifacts\ArtifactsStorage;
-use Creatortsv\WorkflowProcess\Tests\Proto\TestSubject;
-use Iterator;
+use Creatortsv\WorkflowProcess\Stage\StageInterface;
+use Creatortsv\WorkflowProcess\Support\Helper\SpyHacker;
+use Creatortsv\WorkflowProcess\Tests\Proto\Amount;
+use Creatortsv\WorkflowProcess\Tests\Proto\CallableProto;
+use Creatortsv\WorkflowProcess\Tests\Proto\ExtendedAndImplemented;
 use PHPUnit\Framework\TestCase;
 
 class ArtifactsStorageTest extends TestCase
 {
-    public function dataProvider(): Iterator
-    {
-        yield 'With names of artifacts' => [false, 'some'];
-        yield 'With types of artifacts' => [true, TestSubject::class];
-    }
-
-    /**
-     * @dataProvider dataProvider
-     */
-    public function testHas(bool $useTypes, string $value): void
-    {
-        $this->assertTrue($this
-            ->makeStorage()
-            ->useTypes($useTypes)
-            ->has($value));
-    }
-
-    /**
-     * @dataProvider dataProvider
-     */
-    public function testGet(bool $useTypes, string $value): void
-    {
-        $artifacts = $this
-            ->makeStorage()
-            ->useTypes($useTypes)
-            ->get($value);
-
-        $this->assertCount(1, $artifacts);
-        $this->assertInstanceOf(TestSubject::class, current($artifacts));
-    }
-
     public function testSet(): ArtifactsStorage
     {
-        $storage = $this->makeStorage();
+        $storage = new ArtifactsStorage();
+        $hacked = SpyHacker::hack($storage);
 
-        $this->assertInstanceOf(ArtifactsStorage::class, $storage
-            ->set(new TestSubject(2), 'some')
-            ->set(new TestSubject(5)));
+        $this->assertCount(0, $hacked->artifacts ?? []);
+        $this->assertCount(0, $hacked->relations ?? []);
 
-        $this->assertCount(3, $storage);
-        $this->assertCount(3, $artifacts = $storage
-            ->useTypes(true)
-            ->get(TestSubject::class));
+        $storage->set(new Amount());
+        $storage->set(new ExtendedAndImplemented());
+        $storage->set(new ExtendedAndImplemented());
+        $storage->set(2, 'amount');
 
-        $this->assertCount(2, $storage->get('some'));
-
-        foreach ($artifacts as $artifact) {
-            $this->assertInstanceOf(TestSubject::class, $artifact);
-        }
-
-        $this->assertCount(3, array_unique($artifacts, SORT_REGULAR));
+        $this->assertCount(4, $hacked->artifacts ?? []);
+        $this->assertCount(4, $hacked->relations ?? []);
 
         return $storage;
     }
@@ -69,20 +34,58 @@ class ArtifactsStorageTest extends TestCase
     /**
      * @depends testSet
      */
-    public function testRemove(ArtifactsStorage $storage): void
+    public function testCount(ArtifactsStorage $storage): ArtifactsStorage
     {
-        $this->assertInstanceOf(ArtifactsStorage::class, $storage->remove('some'));
-        $this->assertCount(1, $storage);
-        $this->assertCount(0, $storage
-            ->useTypes(true)
-            ->remove(TestSubject::class));
-    }
-
-    private function makeStorage(): ArtifactsStorage
-    {
-        $storage = new ArtifactsStorage();
-        $storage->set(new TestSubject(), 'some');
+        $this->assertSame(4, $storage->count());
+        $this->assertSame(1, $storage->count(Amount::class));
+        $this->assertSame(1, $storage->count('amount'));
+        $this->assertSame(2, $storage->count(StageInterface::class));
+        $this->assertSame(2, $storage->count(CallableProto::class));
+        $this->assertSame(0, $storage->count('some'));
 
         return $storage;
+    }
+
+    /**
+     * @depends testCount
+     */
+    public function testHas(ArtifactsStorage $storage): ArtifactsStorage
+    {
+        $this->assertTrue($storage->has(Amount::class));
+        $this->assertTrue($storage->has('amount'));
+        $this->assertTrue($storage->has(StageInterface::class));
+        $this->assertTrue($storage->has(CallableProto::class));
+        $this->assertFalse($storage->has('other'));
+
+        return $storage;
+    }
+
+    /**
+     * @depends testHas
+     */
+    public function testGet(ArtifactsStorage $storage): ArtifactsStorage
+    {
+        $this->assertEquals([new Amount()], $storage->get(Amount::class));
+        $this->assertInstanceOf(ExtendedAndImplemented::class, current($storage->get(StageInterface::class)));
+        $this->assertInstanceOf(ExtendedAndImplemented::class, current($storage->get(CallableProto::class)));
+        $this->assertSame(2, current($storage->get('amount')));
+        $this->assertSame([], $storage->get('other'));
+
+        return $storage;
+    }
+
+    /**
+     * @depends testGet
+     */
+    public function testRemove(ArtifactsStorage $storage): void
+    {
+        $storage->remove('amount');
+        $storage->remove(StageInterface::class);
+
+        $this->assertFalse($storage->has(ExtendedAndImplemented::class));
+        $this->assertFalse($storage->has(CallableProto::class));
+        $this->assertFalse($storage->has(StageInterface::class));
+        $this->assertFalse($storage->has('amount'));
+        $this->assertTrue($storage->has(Amount::class));
     }
 }

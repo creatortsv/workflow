@@ -1,186 +1,110 @@
 <?php
 
-declare(strict_types=1);
-
 namespace Creatortsv\WorkflowProcess\Stage;
 
 use ArrayIterator;
-use Closure;
-use Creatortsv\WorkflowProcess\Exception\StageNotFoundException;
-use Creatortsv\WorkflowProcess\Utils\CallbackWrapper;
+use Creatortsv\WorkflowProcess\Enum\SwitchTo;
+use Creatortsv\WorkflowProcess\Exception\StagesNotFoundException;
 use OutOfBoundsException;
-use ReflectionException;
 
-class StageManager
+final class StageManager
 {
-    private ArrayIterator $stages;
-    private Closure $prev;
-    private Closure $next;
+    public readonly ArrayIterator $stages;
+    private ?int $next;
+    private ?int $prev = null;
+    private bool $blocked = false;
 
-    /**
-     * @throws ReflectionException
-     */
-    public function __construct(callable ...$stages)
+    public function __construct(Stage ...$stages)
     {
-        $this->stages = new ArrayIterator();
+        $this->stages = new ArrayIterator($stages);
+        $currentIndex = (int) $this->stages->key();
 
-        $numbers = [];
-
-        foreach ($stages as $stage) {
-            $stage = CallbackWrapper::of($stage);
-            $name = (string) $stage;
-            $numbers[$name] ??= 0;
-            $numbers[$name] ++ ;
-
-            $this->stages->append(CallbackWrapper::of($stage, $numbers[$name]));
-        }
-
-        $this->restart();
+        $this->next = $this
+            ->resolve( ++ $currentIndex, predict: true)
+            ->key();
     }
 
-    public function getStages(): ArrayIterator
+    public function isBlocked(): bool
     {
-        return $this->stages;
+        return $this->blocked;
     }
 
     /**
-     * @throws StageNotFoundException
+     * @throws StagesNotFoundException
      */
-    public function switchTo(string $name, int $number = 1): StageManager
+    public function switchTo(SwitchTo|string $where): StageManager
     {
-        $names = array_map(fn (CallbackWrapper $stage): string => (string) $stage, (array) $this->stages);
-        $names = array_keys($names, $name, true);
-        $index = $names[ -- $number] ?? null;
-
-        if ($index === null) {
-            throw new StageNotFoundException($name, $number);
+        if ($where instanceof SwitchTo) {
+            $this->next = match ($where) {
+                SwitchTo::END => null,
+                SwitchTo::BACK => $this->resolve($this->prev ?? 0, predict: true)->key(),
+                SwitchTo::REPEAT => $this->stages->key(),
+                SwitchTo::RETURN => $this->resolve($this->prev ?? 0, predict: true)->key() + 1,
+                SwitchTo::START => $this->resolve(0, predict: true)->key(),
+            };
+        } else {
+            $this->next = $this->search($where);
         }
 
-        $this->next = $this::switcher($index);
-
-        return $this;
-    }
-
-    public function restart(): StageManager
-    {
-        $this->stages->rewind();
-
-        $current = $this
-            ->stages
-            ->key();
-
-        $this->prev = $this::switcher($this::position($current, - 1));
-        $this->next = $this::switcher($this::position($current, + 1));
-
-        return $this;
-    }
-
-    public function back(int $length = 1): StageManager
-    {
-        if ($length === 0) {
-            return $this;
-        }
-
-        $length = abs($length);
-        $length -- ;
-        $number = (int) $this
-            ->predict($this->prev)
-            ->key() - $length;
-
-        if ($number < 0) {
-            $number = 0;
-        }
-
-        $this->next = $this::switcher($number);
-
-        return $this;
-    }
-
-    public function skip(int $length = 1): StageManager
-    {
-        if ($length < 0) {
-            throw new OutOfBoundsException();
-        }
-
-        if ($length === 0) {
-            return $this;
-        }
-
-        $predicted = $this
-            ->predict($this->next)
-            ->key();
-
-        $this->next = $this::switcher($this::position($predicted, + $length));
-
-        return $this;
-    }
-
-    public function stop(): StageManager
-    {
-        $this->next = $this::switcher();
+        $this->blocked = true;
 
         return $this;
     }
 
     public function switch(): void
     {
-        ($this->prev = $this::switcher($this::position($this->stages->key())));
-        ($this->next)($this->stages);
-        ($this->next = $this::switcher($this::position($this->stages->key(), + 1)));
+        $this->prev = $this->stages->key();
+        $this->resolve($this->next);
+
+        if ($this->next !== null) {
+            $predicted = $this->resolve($this->next, predict: true);
+            $predicted->next();
+
+            $this->next = $predicted->key();
+        }
+
+        $this->blocked = false;
     }
 
-    public function previous(): ?CallbackWrapper
+    public function previous(): ?Stage
     {
         return $this
-            ->predict($this->prev)
+            ->resolve($this->prev, predict: true)
             ->current();
     }
 
-    public function next(): ?CallbackWrapper
+    public function next(): ?Stage
     {
         return $this
-            ->predict($this->next)
+            ->resolve($this->next, predict: true)
             ->current();
     }
 
-    private function predict(Closure $of): ArrayIterator
+    private function resolve(int $index = null, bool $predict = false): ArrayIterator
     {
-        $of($stages = $this->getClonedStages());
+        $stages = $predict ? clone $this->stages : $this->stages;
+        $length = $stages->count();
 
-        return $stages;
-    }
-
-    private function getClonedStages(): ArrayIterator
-    {
-        $stages = clone $this->stages;
-
-        $this::switcher()($stages, $this->stages->key());
-
-        return $stages;
-    }
-
-    private static function switcher(?int $position = null): Closure
-    {
-        return function (ArrayIterator $stages, ?int $input = null) use ($position): void {
-            $input ??= $position;
-
+        if ($length) {
             try {
-                if ($input !== null) {
-                    $stages->seek($input);
-                } else {
-                    throw new OutOfBoundsException();
-                }
-            } catch (OutOfBoundsException $e){
-                $stages->seek(max(array_keys((array) $stages)));
+                $stages->seek($index ?? -1);
+            } catch (OutOfBoundsException) {
+                $stages->seek(--$length);
                 $stages->next();
             }
-        };
+        }
+
+        return $stages;
     }
 
-    private static function position(?int $index = null, int $add = 0): ?int
+    /**
+     * @throws StagesNotFoundException
+     */
+    private function search(string $name): int
     {
-        $index !== null && ($index += $add);
+        $names = array_map(fn (Stage $stage): string => $stage->name, (array) $this->stages);
+        $index = array_keys($names, $name, true);
 
-        return $index;
+        return $index[0] ?? throw new StagesNotFoundException($name);
     }
 }
