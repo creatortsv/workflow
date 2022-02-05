@@ -4,50 +4,113 @@ declare(strict_types=1);
 
 namespace Creatortsv\WorkflowProcess;
 
+use Creatortsv\WorkflowProcess\Exception\StagesNotFoundException;
+use Creatortsv\WorkflowProcess\Exception\WorkflowRequirementsMissedException;
 use Creatortsv\WorkflowProcess\Runner\WorkflowRunner;
+use Creatortsv\WorkflowProcess\Stage\Stage;
+use Creatortsv\WorkflowProcess\Stage\StageFactory;
+use Creatortsv\WorkflowProcess\Support\Helper\AttributeReader;
 use ReflectionException;
 
+/**
+ * This class is used to configure a workflow process
+ * Stages, their transitions must be configured with the Workflow class
+ *
+ * @Workflow
+ */
 class Workflow implements WorkflowInterface
 {
     /**
-     * @var array<callable>
+     * @var Stage[]
      */
-    protected array $stages;
+    protected array $stages = [];
 
+    public readonly string|null $required;
+
+    /**
+     * @throws ReflectionException
+     */
     public function __construct(callable ...$stages)
     {
-        $this->setStages(...$stages);
+        $attributes = AttributeReader::of($this)->read(attribute: Support\Workflow::class);
+
+        [, $attributes] = array_pop($attributes) ?? [null, []];
+        $this->required = array_pop($attributes)?->required;
+
+        foreach ($stages as $stage) {
+            $this->stages[] = StageFactory::create(callable: $stage);
+        }
     }
 
     /**
-     * @inheritdoc
+     * @throws StagesNotFoundException
      */
-    public function getStages(): array
+    public function disable(string ...$stages): Workflow
     {
-        return $this->stages;
+        return $this->toggle(false, ...$stages);
     }
 
-    public function setStages(callable ...$stages): Workflow
+    /**
+     * @throws StagesNotFoundException
+     */
+    public function enable(string ...$stages): Workflow
     {
-        $this->stages = $stages;
+        return $this->toggle(true, ...$stages);
+    }
+
+    /**
+     * @throws StagesNotFoundException
+     */
+    final public function toggle(bool $state, string ...$stages): Workflow
+    {
+        $found = [];
+
+        foreach ($this->stages as $stage) {
+            if (in_array($stage->name, $stages, true)) {
+                $stage->enabled = $state;
+                $found[] = $stage;
+            }
+        }
+
+        if ($errors = array_diff($stages, $found)) {
+            throw new StagesNotFoundException(...$errors);
+        }
 
         return $this;
     }
 
-    public function fresh(callable ...$stages): Workflow
+    /**
+     * @return string[]
+     */
+    public function getEnabled(): array
     {
-        $stages = $stages ?: $this->getStages();
-
-        return new static(...$stages);
+        return array_map(fn (Stage $stage): string => $stage->name, $this->enabled());
     }
 
     /**
-     * @template T
-     * @param T ...$context
-     * @throws ReflectionException
+     * @throws WorkflowRequirementsMissedException
      */
-    final public function makeRunner(...$context): WorkflowRunner
+    final public function makeRunner(object ...$context): WorkflowRunner
     {
-        return new WorkflowRunner($context, ...$this->stages);
+        if ($this->required !== null) {
+            $required = array_filter($context, fn (object $object): bool =>
+                $this->required === $object::class ||
+                    (is_subclass_of($object, $this->required)) ||
+                    (in_array($this->required, class_implements($object), true)));
+
+            if (!$required) {
+                throw new WorkflowRequirementsMissedException($this);
+            }
+        }
+
+        return new WorkflowRunner($context, ...$this->enabled());
+    }
+
+    /**
+     * @return Stage[]
+     */
+    protected function enabled(): array
+    {
+        return array_filter($this->stages, fn (Stage $stage): bool => $stage->enabled);
     }
 }

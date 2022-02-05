@@ -6,24 +6,23 @@ namespace Creatortsv\WorkflowProcess\Runner;
 
 use Creatortsv\WorkflowProcess\Artifacts\ArtifactsInjector;
 use Creatortsv\WorkflowProcess\Artifacts\ArtifactsStorage;
-use Creatortsv\WorkflowProcess\Stage\Skip;
+use Creatortsv\WorkflowProcess\Exception\StagesNotFoundException;
+use Creatortsv\WorkflowProcess\Stage\Stage;
 use Creatortsv\WorkflowProcess\Stage\StageManager;
 use Creatortsv\WorkflowProcess\Stage\StageSwitcher;
+use Creatortsv\WorkflowProcess\Transition\Transition;
 use ReflectionException;
 
-/**
- * @template T
- */
 final class WorkflowRunner
 {
     private StageManager $manager;
     private ArtifactsInjector $injector;
+    private bool $started = false;
 
     /**
-     * @param array<T> $context
-     * @throws ReflectionException
+     * @param array<int, mixed> $context
      */
-    public function __construct(array $context, callable ...$stages)
+    public function __construct(array $context, Stage ...$stages)
     {
         $storage = new ArtifactsStorage();
 
@@ -37,27 +36,32 @@ final class WorkflowRunner
 
     /**
      * @throws ReflectionException
+     * @throws StagesNotFoundException
      */
     public function run(): WorkflowRunner
     {
+        if ($this->started) {
+            $this->manager->switch();
+        } else {
+            $this->started = true;
+        }
+
         $stage = $this
             ->manager
-            ->getStages()
+            ->stages
             ->current();
 
-        if ($stage !== null) {
-            $name = $stage->name();
-            $data = $this->injector->injectInto($stage)();
+        if ($stage instanceof Stage) {
+            $this->execute($stage);
 
-            $this->validateData($data) && $this->injector
-                ->getStorage()
-                ->set($data, $name);
+            if ($this->manager->isBlocked() !== true) {
+                $previous = $this
+                    ->manager
+                    ->previous();
 
-            if ($stage->getAfterCallback() !== null) {
-                $this->injector->injectInto($stage->getAfterCallback())();
+                $transition = $this->findTransition($stage, $previous?->name);
+                $transition !== null && $this->manager->switchTo($transition->to);
             }
-
-            $this->manager->switch();
 
             return $this->run();
         }
@@ -66,11 +70,9 @@ final class WorkflowRunner
     }
 
     /**
-     * @template T
-     * @return T
      * @throws ReflectionException
      */
-    public function then(callable $callback)
+    public function then(callable $callback): mixed
     {
         return $this
             ->injector
@@ -78,12 +80,55 @@ final class WorkflowRunner
     }
 
     /**
-     * @param T $data
+     * @throws ReflectionException
      */
-    private function validateData($data): bool
+    private function execute(Stage $stage): void
     {
-        return ($data !== null
-            && !$data instanceof ArtifactsStorage
-            && !$data instanceof StageSwitcher);
+        $data = $this
+            ->injector
+            ->injectInto($stage->instance)();
+
+        if ($data === null) {
+            return;
+        }
+
+        $data = (array) $data;
+
+        if (!array_is_list($data)) {
+            $this->injector
+                ->storage
+                ->set($data, current($stage->artifactNames) ?: null);
+
+            return;
+        }
+
+        array_walk($data, fn ($artifact, int $i) => $this->injector
+            ->storage
+            ->set($artifact, $stage->artifactNames[$i] ?? null));
+    }
+
+    /**
+     * @throws ReflectionException
+     */
+    private function findTransition(Stage $stage, ?string $from = null): ?Transition
+    {/* Transition from has high priority
+        1. Match all of named transitions
+        2. Match all of nullable transitions
+        3. Switch to the next */
+        foreach ($stage->getTransitions($from) as $transition) {
+            if ($transition->expression === true || $this
+                ->injector
+                ->injectInto(
+                    $transition->expression, StageSwitcher::class, ArtifactsStorage::class,
+                )() === true) {
+                return $transition;
+            }
+        }
+
+        if ($from !== null) {
+            return $this->findTransition($stage);
+        }
+
+        return null;
     }
 }
