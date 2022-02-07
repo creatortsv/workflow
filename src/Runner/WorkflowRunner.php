@@ -92,7 +92,7 @@ final class WorkflowRunner
             return;
         }
 
-        $data = (array) $data;
+        !is_array($data) && ($data = [$data]);
 
         if (!array_is_list($data)) {
             $this->injector
