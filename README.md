@@ -9,10 +9,4 @@ Install this package using composer
 ```
 composer require creatortsv/workflow-process
 ```
-## Configuration
-Package uses PHP 8.0 attributes to configure different aspects of a process. There are only four attributes:
-
-- `Support\Workflow`
-- `Support\Stage`
-- `Support\Transition`
-- `Support\Artifacts`
+## Usage

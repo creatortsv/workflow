@@ -3,6 +3,7 @@
 namespace Creatortsv\WorkflowProcess\Transition;
 
 use Closure;
+use Creatortsv\WorkflowProcess\Enum\SwitchTo;
 
 /**
  * Transition describes which stage will be next
@@ -17,7 +18,7 @@ final class Transition
 
     public function __construct(
         public readonly string $to,
-        public readonly ?string $from = null,
+        public readonly SwitchTo|string|null $from = null,
         callable|bool $condition = true,
     ) {
         $this->expression = !$condition instanceof Closure && !is_bool($condition)
