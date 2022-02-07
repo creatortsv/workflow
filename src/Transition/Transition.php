@@ -17,8 +17,8 @@ final class Transition
     public readonly Closure|bool $expression;
 
     public function __construct(
-        public readonly string $to,
-        public readonly SwitchTo|string|null $from = null,
+        public readonly SwitchTo|string $to,
+        public readonly ?string $from = null,
         callable|bool $condition = true,
     ) {
         $this->expression = !$condition instanceof Closure && !is_bool($condition)
