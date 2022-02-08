@@ -61,10 +61,10 @@ class ArtifactsStorage implements Countable
         return $this;
     }
 
-    public function count(?string $name = null): int
+    public function count(?string $nameOrType = null): int
     {
-        if ($name !== null) {
-            return count($this->positions($name));
+        if ($nameOrType !== null) {
+            return count($this->positions($nameOrType));
         }
 
         return count($this->artifacts);
@@ -75,21 +75,9 @@ class ArtifactsStorage implements Countable
      */
     protected function positions(string $name): array
     {
-        $filter = function (string $nameOrType) use ($name): bool {
-            $isMatched = $name === $nameOrType;
-
-            if ($isMatched !== true) {
-                $isMatched = class_exists($nameOrType) && is_subclass_of($nameOrType, $name);
-            }
-
-            if ($isMatched !== true) {
-                $isMatched = interface_exists($nameOrType)
-                    && in_array($name, class_implements($nameOrType), true);
-            }
-
-            return $isMatched;
-        };
-
-        return array_keys(array_filter($this->relations, $filter));
+        return array_keys(array_filter($this->relations, fn (string $nameOrType, int $i): bool
+            => $nameOrType === $name
+                || is_subclass_of($nameOrType, $name)
+                || is_a($this->artifacts[$i], $name), ARRAY_FILTER_USE_BOTH));
     }
 }

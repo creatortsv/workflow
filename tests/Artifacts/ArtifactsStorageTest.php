@@ -21,12 +21,11 @@ class ArtifactsStorageTest extends TestCase
         $this->assertCount(0, $hacked->relations ?? []);
 
         $storage->set(new Amount());
-        $storage->set(new ExtendedAndImplemented());
-        $storage->set(new ExtendedAndImplemented());
+        $storage->set(new ExtendedAndImplemented(), 'extended');
         $storage->set(2, 'amount');
 
-        $this->assertCount(4, $hacked->artifacts ?? []);
-        $this->assertCount(4, $hacked->relations ?? []);
+        $this->assertCount(3, $hacked->artifacts ?? []);
+        $this->assertCount(3, $hacked->relations ?? []);
 
         return $storage;
     }
@@ -36,11 +35,12 @@ class ArtifactsStorageTest extends TestCase
      */
     public function testCount(ArtifactsStorage $storage): ArtifactsStorage
     {
-        $this->assertSame(4, $storage->count());
+        $this->assertSame(3, $storage->count());
         $this->assertSame(1, $storage->count(Amount::class));
         $this->assertSame(1, $storage->count('amount'));
-        $this->assertSame(2, $storage->count(StageInterface::class));
-        $this->assertSame(2, $storage->count(CallableProto::class));
+        $this->assertSame(1, $storage->count(StageInterface::class));
+        $this->assertSame(1, $storage->count(CallableProto::class));
+        $this->assertSame(1, $storage->count('extended'));
         $this->assertSame(0, $storage->count('some'));
 
         return $storage;

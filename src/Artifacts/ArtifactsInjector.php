@@ -7,6 +7,10 @@ namespace Creatortsv\WorkflowProcess\Artifacts;
 use Closure;
 use Creatortsv\WorkflowProcess\Support\Helper\CallableInstance;
 use ReflectionException;
+use ReflectionIntersectionType;
+use ReflectionNamedType;
+use ReflectionType;
+use ReflectionUnionType;
 
 class ArtifactsInjector
 {
@@ -28,16 +32,10 @@ class ArtifactsInjector
             ->reflect()
             ->getParameters() as $parameter) {
             $name = $parameter->getName();
-            $type = $parameter->getType()->getName();
+            $type = $parameter->getType();
 
-            if ($this->excluded($name, $type, ...$exclude) !== true) {
-                $artifacts = $this
-                    ->storage
-                    ->get(
-                        nameOrType: class_exists($type) || interface_exists($type)
-                            ? $type
-                            : $name,
-                    );
+            if (!in_array($name, $exclude, true) && $this::excluded($type, ...$exclude) !== true) {
+                $artifacts = $this->findArguments($name, $type);
 
                 if ($artifacts) {
                     $parameter->isVariadic()
@@ -54,17 +52,59 @@ class ArtifactsInjector
         return fn () => $callback(...$parameters);
     }
 
-    private function excluded(string $name, string $type, string ...$exclude): bool
+    private function findArguments(?string $param = null, ?ReflectionType $type = null): array
     {
-        if (in_array($type, $exclude, true) ||
-            in_array($name, $exclude, true)) {
-            return true;
+        if ($type instanceof ReflectionIntersectionType) {
+            $types = $type->getTypes();
+            $count = count($types);
+            $names = array_fill(0, $count, null);
+            $items = array_unique(array_merge(
+                ...array_map($this->findArguments(...), $names, $types),
+            ), SORT_REGULAR);
+
+            return array_filter($items, fn ($arg): bool
+                => count(array_filter($types, fn (ReflectionNamedType $type): bool
+                => is_subclass_of($arg, $type->getName()))) === $count);
         }
 
-        foreach ($exclude as $nameOrType) {
-            if (is_subclass_of($type, $nameOrType) ||
-                in_array($nameOrType, class_implements($type), true)) {
-                return true;
+        if ($type instanceof ReflectionUnionType) {
+            $types = $type->getTypes();
+            $names = array_fill(0, count($types), $param);
+
+            return array_merge(
+                ...array_map($this->findArguments(...), $names, $types),
+            );
+        }
+
+        if ($type instanceof ReflectionNamedType && !$type->isBuiltin()) {
+            return $this
+                ->storage
+                ->get(nameOrType: $type->getName());
+        }
+
+        if ($param) {
+            return $this
+                ->storage
+                ->get(nameOrType: $param);
+        }
+
+        return [];
+    }
+
+    private static function excluded(?ReflectionType $type = null, string ...$exclude): bool
+    {
+        if ($type instanceof ReflectionIntersectionType ||
+            $type instanceof ReflectionUnionType) {
+            foreach ($type->getTypes() as $t) {
+                if (self::excluded($t, ...$exclude)) {
+                    return true;
+                }
+            }
+        } elseif ($type instanceof ReflectionNamedType && !$type->isBuiltin()) {
+            foreach ($exclude as $item) {
+                if (is_subclass_of($type->getName(), $item)) {
+                    return true;
+                }
             }
         }
 

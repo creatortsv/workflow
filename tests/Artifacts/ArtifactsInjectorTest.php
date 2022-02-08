@@ -31,13 +31,16 @@ class ArtifactsInjectorTest extends TestCase
         $injector->storage->set(new Amount());
         $injector->storage->set(new Amount(amount: 3));
         $injector->storage->set('some', 'name');
-        $injector->storage->set(new ExtendedAndImplemented());
+        $injector->storage->set(new ExtendedAndImplemented(), 'extended');
 
         $callback = $injector->injectInto(function (
             Amount $amount,
             StageInterface $extendedAsInterface,
             CallableProto $extendedAsParent,
-            ExtendedAndImplemented $extended,
+            ExtendedAndImplemented $extendedByType,
+            CallableProto&StageInterface $extendedIntersection,
+            CallableProto|StageInterface $extendedUnion,
+            $extended,
             string $name,
             ?string $another = null,
             Amount ...$amounts,
@@ -48,8 +51,10 @@ class ArtifactsInjectorTest extends TestCase
             $this->assertSame(0, current($amounts)->amount);
 
             $this->assertEquals($extendedAsInterface, $extendedAsParent);
-            $this->assertEquals($extendedAsInterface, $extended);
-            $this->assertEquals($extendedAsParent, $extended);
+            $this->assertEquals($extendedAsInterface, $extendedByType);
+            $this->assertEquals($extendedByType, $extendedIntersection);
+            $this->assertEquals($extendedIntersection, $extendedUnion);
+            $this->assertEquals($extendedUnion, $extended);
 
             $this->assertSame('some', $name);
             $this->assertNull($another);
