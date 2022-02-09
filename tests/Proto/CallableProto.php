@@ -10,4 +10,6 @@ class CallableProto
     }
 
     public function method(): void {}
+
+    public static function staticMethod(): void {}
 }

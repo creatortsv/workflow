@@ -2,6 +2,7 @@
 
 namespace Creatortsv\WorkflowProcess\Transition;
 
+use Closure;
 use Creatortsv\WorkflowProcess\Support\Helper\AttributeReader;
 use Creatortsv\WorkflowProcess\Support;
 use ReflectionClass;
@@ -18,11 +19,8 @@ class TransitionFactory
      */
     public static function create(callable $of): array
     {
-        $reader = AttributeReader::of(object: $of);
-        $isStage = (bool) count($reader->read(Support\Stage::class));
-
         $transition = [];
-        $attributes = $reader->read(
+        $attributes = AttributeReader::of(object: $of)->read(
             attribute: Support\Transition::class,
             flags: AttributeReader::INCLUDE_ROOT
             | AttributeReader::INCLUDE_METHODS
@@ -30,16 +28,35 @@ class TransitionFactory
         );
 
         foreach ($attributes as [$reflect, $attribs]) {
-            $function = fn (Support\Transition $attr): Transition => new Transition(
-                $attr?->to,
-                $attr?->from,
-                condition: match ($reflect::class) {
-                    ReflectionClass::class => $isStage ?: $of(...),
+            $function = function (Support\Transition $attr) use ($of, $reflect): Transition {
+                if ($attr?->callback !== null) {
+                    if (is_callable($attr?->callback)) {
+                        $expression = $attr?->callback instanceof Closure
+                            ? ($attr?->callback)
+                            : ($attr?->callback)(...);
+                    } else {
+                        $expression = $of->{$attr?->callback}(...);
+                    }
+                } elseif ($attr?->expression !== null) {
+                    $expression = $attr?->expression;
+                }
+
+                $transitionArgs = [
+                    $attr?->to,
+                    $attr?->from,
+                ];
+
+                if (isset($expression)) {
+                    return new Transition(...$transitionArgs, condition: $expression);
+                }
+
+                return new Transition(...$transitionArgs, condition: match ($reflect::class) {
+                    ReflectionClass::class => $of(...),
                     ReflectionMethod::class,
                     ReflectionFunction::class => $reflect->getClosure((object) $of),
-                    ReflectionProperty::class => fn (): bool => $reflect->getValue((object) $of),
-                },
-            );
+                    ReflectionProperty::class => fn(): bool => $reflect->getValue((object) $of),
+                });
+            };
 
             array_push($transition, ...array_map($function, $attribs));
         }

@@ -17,20 +17,24 @@ class TransitionFactoryTest extends TestCase
         yield 'Stage as callable object with all type of artifacts' => [
             new #[
                 Support\Stage,
-                Support\Transition('stage.1'),
-                Support\Transition('stage.2'),
+                Support\Transition('stage.1', expression: true),
+                Support\Transition('stage.2', callback: '__invoke'),
+                Support\Transition('stage.3'),
             ] class {
-                #[Support\Transition('stage.3', 'stage.1')]
-                #[Support\Transition('stage.4', 'stage.2')]
+                #[Support\Transition('stage.4', 'stage.1')]
+                #[Support\Transition('stage.5', 'stage.2')]
                 public bool $done = false;
 
-                #[Support\Transition('stage.5')]
+                #[Support\Transition('stage.6')]
                 public function toSecond(): bool
                 {
                     return $this->done;
                 }
 
-                public function __invoke(): void {}
+                public function __invoke(): bool
+                {
+                    return true;
+                }
             },
         ];
     }
@@ -43,7 +47,7 @@ class TransitionFactoryTest extends TestCase
     {
         $transitions = TransitionFactory::create($callable);
 
-        $this->assertCount(5, $transitions);
+        $this->assertCount(6, $transitions);
 
         foreach ($transitions as $i => $transition) {
             $this->assertInstanceOf(Transition::class, $transition);
@@ -51,13 +55,17 @@ class TransitionFactoryTest extends TestCase
 
             switch ($i) {
                 case 0:
-                case 1:
                     $this->assertTrue($transition->expression);
 
                     break;
+                case 1:
                 case 2:
+                    $this->assertInstanceOf(Closure::class, $transition->expression);
+
+                    break;
                 case 3:
                 case 4:
+                case 5:
                     $this->assertInstanceOf(Closure::class, $transition->expression);
                     $this->assertFalse(($transition->expression)());
             }
