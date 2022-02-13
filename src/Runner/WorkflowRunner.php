@@ -54,7 +54,7 @@ final class WorkflowRunner
         if ($stage instanceof Stage) {
             $this->execute($stage);
 
-            if ($this->manager->isBlocked() !== true) {
+            if ($this->manager->isBlocked() !== true && $stage->hasTransitions()) {
                 $previous = $this
                     ->manager
                     ->previous();
@@ -123,10 +123,6 @@ final class WorkflowRunner
                 )() === true) {
                 return $transition;
             }
-        }
-
-        if ($from !== null) {
-            return $this->findTransition($stage);
         }
 
         return null;

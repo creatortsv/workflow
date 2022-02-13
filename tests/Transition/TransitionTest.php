@@ -14,14 +14,21 @@ class TransitionTest extends TestCase
         $transition = new Transition('some');
 
         $this->assertTrue($transition->expression);
-        $this->assertNull($transition->from);
+        $this->assertEmpty($transition->from);
         $this->assertSame('some', $transition->to);
 
-        $transition = new Transition('some', 'from', new CallableProto());
+        $transition = new Transition('some', 'from', condition: new CallableProto());
 
         $this->assertInstanceOf(Closure::class, $transition->expression);
         $this->assertTrue(($transition->expression)());
         $this->assertSame('some', $transition->to);
-        $this->assertSame('from', $transition->from);
+        $this->assertSame(['from'], $transition->from);
+
+        $transition = new Transition('some', 'from', 'from', new CallableProto());
+
+        $this->assertInstanceOf(Closure::class, $transition->expression);
+        $this->assertTrue(($transition->expression)());
+        $this->assertSame('some', $transition->to);
+        $this->assertEmpty($transition->from);
     }
 }

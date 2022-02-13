@@ -20,9 +20,14 @@ final class Stage
      * Exception will be thrown if more than one of them with the same "from" property value return TRUE
      * Exception won't be thrown if all of them return FALSE
      *
-     * @var array<string|null, Transition[]>
+     * @var array<string, Transition[]>
      */
     private array $transitions = [];
+
+    /**
+     * @var Transition[]
+     */
+    private array $unclassified = [];
 
     public function __construct(
         callable $callable,
@@ -47,10 +52,14 @@ final class Stage
 
     public function setTransitions(Transition ...$transitions): Stage
     {
-        $this->transitions = [];
-
         foreach ($transitions as $transition) {
-            $this->transitions[$transition->from][] = $transition;
+            if ($transition->from) {
+                foreach ($transition->from as $name) {
+                    $this->transitions[$name][] = $transition;
+                }
+            } else {
+                $this->unclassified[] = $transition;
+            }
         }
 
         return $this;
@@ -58,7 +67,7 @@ final class Stage
 
     public function addTransitions(Transition ...$transitions): Stage
     {
-        $this->setTransitions(...$this->transitions, ...$transitions);
+        $this->setTransitions(...$transitions);
 
         return $this;
     }
@@ -68,7 +77,13 @@ final class Stage
      */
     public function getTransitions(?string $from = null): array
     {
-        return $this->transitions[$from] ?? [];
+        $transitions = $this->transitions[$from] ?? [];
+
+        return [
+            ...$transitions,
+            ...array_filter($this->unclassified, fn (Transition $t): bool => !$from
+                || !in_array($from, $t->except, true)),
+        ];
     }
 
     public function setArtifactNames(string ...$names): Stage
@@ -76,5 +91,10 @@ final class Stage
         $this->artifactNames = $names;
 
         return $this;
+    }
+
+    public function hasTransitions(): int
+    {
+        return !empty($this->transitions) || !empty($this->unclassified);
     }
 }

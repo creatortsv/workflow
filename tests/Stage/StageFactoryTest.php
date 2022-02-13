@@ -42,6 +42,6 @@ class StageFactoryTest extends TestCase
 
         $this->assertInstanceOf(Stage::class, $stage);
         $this->assertSame('stage.init', $stage->name);
-        $this->assertCount(5, $items);
+        $this->assertCount(11, $items);
     }
 }

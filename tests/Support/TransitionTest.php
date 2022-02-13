@@ -21,16 +21,16 @@ class TransitionTest extends AbstractAttributeTestCase
 
         $this->assertInstanceOf(Transition::class, $attrib);
         $this->assertSame('some', $attrib->to);
-        $this->assertNull($attrib->from);
+        $this->assertEmpty($attrib->from);
         $this->assertNull($attrib->expression);
         $this->assertSame('method', $attrib->callback);
 
-        $object = new #[Transition(to: 'some', from: 'other', expression: true)] class {};
+        $object = new #[Transition(to: 'some', from: 'other', except: 'other', expression: true)] class {};
         $attrib = $this->getAttribute($object, Transition::class);
 
         $this->assertInstanceOf(Transition::class, $attrib);
         $this->assertSame('some', $attrib->to);
-        $this->assertSame('other', $attrib->from);
+        $this->assertSame([], $attrib->from);
         $this->assertTrue($attrib->expression);
         $this->assertNull($attrib->callback);
 
@@ -39,7 +39,7 @@ class TransitionTest extends AbstractAttributeTestCase
 
         $this->assertInstanceOf(Transition::class, $attrib);
         $this->assertSame('some', $attrib->to);
-        $this->assertNull($attrib->from);
+        $this->assertEmpty($attrib->from);
         $this->assertNull($attrib->expression);
         $this->assertTrue(is_callable($attrib->callback));
     }

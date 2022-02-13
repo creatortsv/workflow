@@ -44,6 +44,7 @@ class TransitionFactory
                 $transitionArgs = [
                     $attr?->to,
                     $attr?->from,
+                    $attr?->except,
                 ];
 
                 if (isset($expression)) {
@@ -52,9 +53,9 @@ class TransitionFactory
 
                 return new Transition(...$transitionArgs, condition: match ($reflect::class) {
                     ReflectionClass::class => $of(...),
-                    ReflectionMethod::class,
-                    ReflectionFunction::class => $reflect->getClosure((object) $of),
-                    ReflectionProperty::class => fn(): bool => $reflect->getValue((object) $of),
+                    ReflectionMethod::class => $of->{$reflect->getShortName()}(...),
+                    ReflectionFunction::class => $reflect->getClosure(),
+                    ReflectionProperty::class => fn (): bool => $reflect->getValue((object) $of),
                 });
             };
 
